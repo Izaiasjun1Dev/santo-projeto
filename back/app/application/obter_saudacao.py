@@ -11,6 +11,6 @@ class ObterSaudacao:
 
     def executar(self) -> Saudacao:
         return Saudacao(
-            mensagem="Ola, turma! Esta e a versao 1.",
+            mensagem="Ola, turma! Esta e a versao 3.",
             servidor=self._servidor.nome(),
         )
