@@ -25,7 +25,7 @@ NOME_CLUSTER=${NOME_CLUSTER:-santo-projeto}
 echo "==> 1/4 Removendo a aplicação do cluster $NOME_CLUSTER"
 if aws eks describe-cluster --name "$NOME_CLUSTER" --region us-east-1 >/dev/null 2>&1; then
   if aws eks update-kubeconfig --name "$NOME_CLUSTER" --region us-east-1 >/dev/null 2>&1 \
-     && kubectl delete -f back/k8s/ --ignore-not-found; then
+     && kubectl delete -f back/k8s/ --ignore-not-found --timeout=5m; then
     echo "Esperando o load balancer sumir (até 5 min)..."
     LIMITE=$(( $(date +%s) + 300 ))
     while :; do

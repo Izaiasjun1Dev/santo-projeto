@@ -38,6 +38,17 @@ docker push "$URL_ECR:v1"
 # 4. kubeconfig e espera pelos nós
 echo "==> 4/6 Configurando o kubectl e esperando os nós"
 aws eks update-kubeconfig --name "$NOME_CLUSTER" --region us-east-1
+# Os nós demoram a aparecer; sem esperar, o "kubectl wait" falha com
+# "no matching resources found".
+LIMITE=$(( $(date +%s) + 600 ))
+while [ -z "$(kubectl get nodes -o name 2>/dev/null || true)" ]; do
+  if [ "$(date +%s)" -ge "$LIMITE" ]; then
+    echo "Nenhum nó apareceu em 10 min. Confira o node group no console do EKS." >&2
+    exit 1
+  fi
+  echo "Esperando os nós aparecerem..."
+  sleep 15
+done
 kubectl wait --for=condition=Ready nodes --all --timeout=10m
 
 # 5. Aponta o deployment para a imagem no ECR (só troca o placeholder;
