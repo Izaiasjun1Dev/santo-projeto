@@ -36,9 +36,9 @@ Também precisam continuar de pé:
   - a porta é 8000.
 - **`front/`:** React com Vite nas mesmas quatro camadas. A URL da API entra por `VITE_API_URL` no build, e o resultado é publicado no bucket S3 (site estático em HTTP).
 - **`.github/workflows/pipeline.yml`** (workflow "Pipeline"): roda em todo push na `main` (e manualmente).
-  - job `ci`: valida o back, o front e o Terraform;
-  - job `cd`: faz o build da imagem, o push no ECR e o `kubectl set image` no EKS, autenticando por OIDC (sem chave de acesso guardada);
-  - o módulo `infra/modules/cicd` cria o provedor OIDC, o papel IAM `santo-projeto-github` e o acesso ao cluster (`AmazonEKSEditPolicy` no namespace `default`); variável `repositorio_github`, saída `papel_cicd`;
+  - job `ci`: lint e build do front e build da imagem do back;
+  - job `cd`: autentica por OIDC (sem chave de acesso guardada), faz build `linux/amd64` e push no ECR com a tag do SHA do commit (7 caracteres), `aws eks update-kubeconfig`, troca a linha `image:` do `back/k8s/deployment.yaml` com `sed` (só dentro do runner), `kubectl apply -f back/k8s/` e `kubectl rollout status deployment/back --timeout=5m`;
+  - o módulo `infra/modules/cicd` cria o provedor OIDC, o papel IAM `santo-projeto-github` (só pode ser assumido a partir de `refs/heads/main` de `repositorio_github`; uma execução manual em outra branch falha no login da AWS) e o acesso ao cluster (`AmazonEKSEditPolicy` no namespace `default`); variável `repositorio_github`, saída `papel_cicd`;
   - o segredo `AWS_PAPEL_CICD` é criado pelo `preparar.sh` e apagado pelo `destruir.sh`; sem ele o `cd` imprime "Infra desligada: deploy pulado" e termina verde.
 - **`scripts/`** (bash, só macOS):
   - `preparar.sh`: `terraform apply`, push da `back:v1` (amd64) para o ECR, kubeconfig, e troca do placeholder `URL-DO-REPOSITORIO` em `back/k8s/deployment.yaml`, que não deve ser commitada com a URL real.
