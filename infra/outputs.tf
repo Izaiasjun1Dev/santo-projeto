@@ -13,3 +13,7 @@ output "bucket_site" {
 output "url_site" {
   value = module.site.url
 }
+
+output "papel_cicd" {
+  value = module.cicd.arn_papel
+}

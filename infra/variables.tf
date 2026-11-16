@@ -29,3 +29,7 @@ variable "tipo_instancia" {
 variable "quantidade_nos" {
   type = number
 }
+
+variable "repositorio_github" {
+  type = string
+}

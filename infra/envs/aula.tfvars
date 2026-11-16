@@ -1,8 +1,9 @@
-regiao         = "us-east-1"
-projeto        = "santo-projeto"
-ambiente       = "aula"
-cidr_vpc       = "10.0.0.0/16"
-zonas          = ["us-east-1a", "us-east-1b"]
-repositorios   = ["back"]
-tipo_instancia = "t3.medium"
-quantidade_nos = 2
+regiao             = "us-east-1"
+projeto            = "santo-projeto"
+ambiente           = "aula"
+cidr_vpc           = "10.0.0.0/16"
+zonas              = ["us-east-1a", "us-east-1b"]
+repositorios       = ["back"]
+tipo_instancia     = "t3.medium"
+quantidade_nos     = 2
+repositorio_github = "Izaiasjun1Dev/santo-projeto"
