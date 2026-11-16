@@ -44,7 +44,7 @@
 
 ---
 
-### Tarefa 0: Repositório base
+### Task 0: Repositório base
 
 **Arquivos:**
 - Criar: `.gitignore`
@@ -54,7 +54,7 @@
 - [ ] **Passo 3:** verificar com `git check-ignore -v infra/.terraform/x infra/terraform.tfstate front/node_modules/x`. Esperado: as três linhas casam. `git check-ignore infra/.terraform.lock.hcl` não deve imprimir nada.
 - [ ] **Passo 4:** commit `chore: repositório base` (`.gitignore`, `docs/`, `.vscode/`).
 
-### Tarefa 1: Back (API FastAPI)
+### Task 1: Back (API FastAPI)
 
 **Arquivos:**
 - Criar: `back/app/__init__.py` e um `__init__.py` vazio em cada camada (`domain`, `application`, `infrastructure`, `presentation`)
@@ -84,7 +84,7 @@
   - por fim, `docker stop back-teste`.
 - [ ] **Passo 6:** commit `feat(back): API da saudação em quatro camadas`.
 
-### Tarefa 2: Front (React + Vite)
+### Task 2: Front (React + Vite)
 
 **Arquivos:**
 - Criar: `front/` via `npm create vite@latest front -- --template react`
@@ -108,7 +108,7 @@
   - Esperado: dois itens na lista, cada um com "Respondido por <id do container>".
 - [ ] **Passo 5:** commit `feat(front): página React em quatro camadas` (com o `package-lock.json`).
 
-### Tarefa 3: Infra (Terraform modular)
+### Task 3: Infra (Terraform modular)
 
 **Arquivos:**
 - Criar: `infra/main.tf`, `infra/variables.tf`, `infra/outputs.tf` e `infra/envs/aula.tfvars`
@@ -128,7 +128,7 @@
 - [ ] **Passo 4:** rodar `terraform providers lock -platform=darwin_arm64 -platform=darwin_amd64 -platform=linux_amd64 -platform=windows_amd64`. Assim o lock serve para o Mac do professor e para os alunos no WSL.
 - [ ] **Passo 5:** commit `feat(infra): raiz, módulos rede/ecr/eks/site e envs/aula.tfvars`.
 
-### Tarefa 4: Pré-checagem da conta e `conferir.sh`
+### Task 4: Pré-checagem da conta e `conferir.sh`
 
 **Arquivos:**
 - Criar: `scripts/conferir.sh`
@@ -165,7 +165,7 @@
 - [ ] **Passo 4:** rodar `bash -n scripts/conferir.sh && scripts/conferir.sh; echo "saida=$?"`. Esperado: "nada sobrando" e `saida=0`, já que a conta hoje só tem a VPC padrão, que não pode aparecer como sobra.
 - [ ] **Passo 5:** commit `feat(scripts): conferir.sh e registro do ensaio`.
 
-### Tarefa 5: Imagens públicas no GHCR (`publicar-imagens.sh`)
+### Task 5: Imagens públicas no GHCR (`publicar-imagens.sh`)
 
 **Arquivos:**
 - Criar: `scripts/publicar-imagens.sh`
@@ -192,7 +192,7 @@
 - [ ] **Passo 5: confirmar a `v2`.** Rodar `docker run --rm -d -p 8001:8000 --name v2 ghcr.io/$GITHUB_USER/santo-projeto-back:v2`. `curl -s localhost:8001/api/saudacao` precisa conter `versao 2`. Depois, `docker stop v2`.
 - [ ] **Passo 6:** commit `feat(scripts): publicar-imagens.sh (GHCR multi-arquitetura + nó do kind)`.
 
-### Tarefa 6: Ensaio do caminho kind (o Guia, passo a passo)
+### Task 6: Ensaio do caminho kind (o Guia, passo a passo)
 
 **Arquivos:**
 - Modificar: `docs/ensaio.md` › kind
@@ -209,7 +209,7 @@
 - [ ] **Passo 5:** rodar `kubectl delete deployment back && kind delete cluster --name aula`.
 - [ ] **Passo 6:** commit `docs: ensaio do caminho kind`.
 
-### Tarefa 7: `preparar.sh` e `destruir.sh`
+### Task 7: `preparar.sh` e `destruir.sh`
 
 **Arquivos:**
 - Criar: `scripts/preparar.sh`
@@ -233,7 +233,7 @@
 - [ ] **Passo 3:** conferir a sintaxe com `bash -n scripts/preparar.sh && bash -n scripts/destruir.sh`. Esperado: sem saída.
 - [ ] **Passo 4:** commit `feat(scripts): preparar.sh e destruir.sh`.
 
-### Tarefa 8: Ensaio na AWS (uma rodada técnica)
+### Task 8: Ensaio na AWS (uma rodada técnica)
 
 **Arquivos:**
 - Modificar: `docs/ensaio.md` › AWS. Também qualquer arquivo de código que o ensaio obrigue a corrigir, anotado em "Mudanças para os docs".
@@ -272,7 +272,7 @@
   - o que falhou e como foi corrigido.
 - [ ] **Passo 11:** commit `docs: ensaio na AWS` (com as correções de código, se houver).
 
-### Tarefa 9: README e rodada do professor
+### Task 9: README e rodada do professor
 
 **Arquivos:**
 - Criar: `README.md`
@@ -294,7 +294,7 @@
 - [ ] **Passo 3:** verificar com `grep -rnE '[0-9]{12}' --exclude-dir=node_modules --exclude-dir=.terraform .`. Esperado: nenhum ID de conta em arquivo versionado. Conferir manualmente cada número de 12 dígitos que aparecer.
 - [ ] **Passo 4:** commit `docs: README e rodada do professor`.
 
-### Tarefa 10: Atualizar os docs da aula
+### Task 10: Atualizar os docs da aula
 
 **Arquivos:**
 - Os docs Roteiro (https://claude.ai/artifact/KksVhYknkS6PcgKDuoxqzS) e Guia (https://claude.ai/artifact/84trFcnbNVicMbhbnDAq7n), editados pelo conector Claude Docs (`update`), sempre lendo antes de editar.
