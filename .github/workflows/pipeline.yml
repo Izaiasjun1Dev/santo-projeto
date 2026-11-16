@@ -8,6 +8,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Por padrão o token do workflow só lê. O cd pede mais (id-token) por conta própria.
+permissions:
+  contents: read
+
 jobs:
   ci:
     name: CI (conferir o código)
@@ -52,7 +56,8 @@ jobs:
     steps:
       - name: Avisar que o deploy foi pulado
         if: env.PAPEL == ''
-        run: echo "Infra desligada, deploy pulado"
+        run: |
+          echo "Infra desligada: deploy pulado"
 
       - name: Baixar o código
         if: env.PAPEL != ''
