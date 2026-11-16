@@ -23,7 +23,7 @@ O código do Roteiro nunca foi executado. O objetivo desta implementação é tr
 
 ## 3. Não objetivos
 
-- CI, GitHub Actions e testes automatizados além dos testes de fumaça do ensaio.
+- Suíte de testes automatizados além dos testes de fumaça do ensaio. O pipeline de CI/CD é conteúdo da aula (ver `2026-11-16-aula-cicd-design.md`).
 - HTTPS, CloudFront e domínio próprio. O Roteiro explica para a turma por que a aula usa HTTP.
 - Estado remoto do Terraform. O estado fica local, porque o Roteiro mostra o `terraform.tfstate` como "a memória" do Terraform.
 - Outros ambientes além de `envs/aula.tfvars`. A estrutura permite criar mais, mas nenhum é criado.

@@ -84,6 +84,10 @@ Preços on-demand em `us-east-1` (AWS Pricing API, 16/11): EKS US$ 0,10/h por cl
 - **Este ensaio:** infraestrutura de pé por ~35 min na rodada 1 e ~30 min na rodada 2, LB por ~5 min em cada. Contando hora cheia para EKS, NAT e LB (cobrança por hora ou fração), mais tráfego de NAT (pull de imagens, < 1 GB) e logs do plano de controle: **menos de US$ 1** no total.
 - **Dia da aula (08:00–12:00; infraestrutura de pé ~4,5 h, das 7h30 ao fim do destroy; LB por ~2 h):** EKS 0,45 + nós 0,37 + NAT 0,23 + LB 0,07 + IPs, discos, NAT por GB e logs ~0,15 = **cerca de US$ 1,30 a US$ 1,50**. Esquecer tudo ligado por um dia custa ~US$ 6,50.
 
+## CI/CD
+
+Pendente: ensaio do pipeline (Task 6).
+
 ## Mudanças para os docs
 
 - **Roteiro › Código: infra › Módulo eks:** o `modules/eks/main.tf` ganhou a linha `kubernetes_version     = "1.37"` logo abaixo de `name`, e `version = "~> 21.0"` virou `version = "21.29.0"`.
@@ -100,6 +104,8 @@ Preços on-demand em `us-east-1` (AWS Pricing API, 16/11): EKS US$ 0,10/h por cl
 - **Guia › Desafio, item 4:** com a imagem já no nó o substituto fica `Running` em menos de 1 s; avisar que o tempo é "alguns segundos". (opcional)
 - **Roteiro › Cronograma (mudança de 16/11, não veio do ensaio):** a aula passou a ser das 08:00 às 12:00, com o mesmo conteúdo e mais prática: 08:00 abertura e ambiente (40 min), 08:40 Parte 1 (30), 09:10 "siga a variável" (20), 09:30 intervalo (15), 09:45 Parte 2 na AWS (40), 10:25 intervalo (15), 10:40 alunos nos sete passos no kind (45), 11:25 desafio (20), 11:45 encerramento com destroy ao vivo (15). Rodar o `preparar.sh` às 7h30; custo do dia ~US$ 1,30 a 1,50.
 - **Guia › Desafio:** "em 15 minutos" vira "em 20 minutos".
+- **Roteiro › Cronograma (CI/CD):** o bloco de CI/CD entra às 10:40 (25 min): 10:40 CI/CD, 11:05 alunos nos sete passos no kind (30), 11:35 desafio (10), 11:45 encerramento com destroy ao vivo (15). Os blocos anteriores não mudam. Na demo: `git commit -m "versao 3" back/app/application/obter_saudacao.py` (só esse arquivo) e, para desfazer, `git revert HEAD --no-edit && git push`; acompanhar em https://github.com/Izaiasjun1Dev/santo-projeto/actions.
+- **Guia › Desafio: 20 → 10 minutos:** o desafio passa a ter 10 minutos (vinha de 20).
 
 ## Rodada do professor
 

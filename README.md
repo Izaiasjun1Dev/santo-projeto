@@ -6,7 +6,8 @@ Projeto da aula de infraestrutura: uma API e um site React. O professor demonstr
 
 ```
 santo-projeto/
-├── infra/      # Terraform: raiz + modules/{rede,ecr,eks,site} + envs/aula.tfvars
+├── infra/      # Terraform: raiz + modules/{rede,ecr,eks,site,cicd} + envs/aula.tfvars
+├── .github/    # workflows/pipeline.yml (CI/CD)
 ├── back/       # API FastAPI em quatro camadas + Dockerfile + k8s/
 ├── front/      # React (Vite) em quatro camadas
 ├── scripts/    # preparar.sh, publicar-imagens.sh, destruir.sh, conferir.sh
@@ -61,6 +62,10 @@ Execute os comandos abaixo no **terminal WSL (bash)**, não no PowerShell nem no
    ```
 
    Depois de apagar um pod, trocar a imagem ou voltar a versão, o `port-forward` não encerra na hora: o próximo `curl` falha (`Empty reply from server`) e só então o terminal 2 mostra `error: lost connection to pod`. Se o `curl` falhar, aperte Ctrl+C no terminal do `port-forward` e rode-o de novo.
+
+## Pipeline (CI/CD)
+
+Todo push na `main` dispara o workflow "Pipeline" (CI e deploy no EKS): https://github.com/Izaiasjun1Dev/santo-projeto/actions
 
 ## Atenção: custo na AWS
 

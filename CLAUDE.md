@@ -10,6 +10,7 @@ Estado atual: em construção, conforme o plano. Antes de mexer em qualquer cois
 - `docs/superpowers/specs/2026-11-16-aula-infra-design.md`: a spec aprovada (o que construir e o que não construir).
 - `docs/superpowers/plans/2026-11-16-aula-infra.md`: o plano, tarefa por tarefa.
 - `docs/superpowers/specs/2026-11-16-aula-infra-roteiro-referencia.md`: o código-base de todas as pastas.
+- `docs/superpowers/specs/2026-11-16-aula-cicd-design.md`: o bloco de CI/CD (pipeline) da aula.
 - `docs/ensaio.md` (quando existir): resultados do ensaio, tempos e a seção "Mudanças para os docs".
 
 ## O código precisa bater com dois docs externos
@@ -26,7 +27,7 @@ Também precisam continuar de pé:
 
 ## Arquitetura (visão geral)
 
-- **`infra/`:** uma raiz Terraform que só chama módulos (`rede`, `ecr`, `eks`, `site`) e um `.tfvars` por ambiente (só existe `envs/aula.tfvars`). O estado fica local, de propósito: a aula mostra o `terraform.tfstate`. As tags `Projeto=santo-projeto` vêm via `default_tags`, e o `scripts/conferir.sh` depende delas.
+- **`infra/`:** uma raiz Terraform que só chama módulos (`rede`, `ecr`, `eks`, `site`, `cicd`) e um `.tfvars` por ambiente (só existe `envs/aula.tfvars`). O estado fica local, de propósito: a aula mostra o `terraform.tfstate`. As tags `Projeto=santo-projeto` vêm via `default_tags`, e o `scripts/conferir.sh` depende delas.
 - **`back/`:** API FastAPI em Clean Architecture, com as dependências apontando para dentro:
   - `presentation` e `infrastructure` → `application` → `domain`;
   - `main.py` monta tudo;
@@ -34,10 +35,16 @@ Também precisam continuar de pé:
   - `GET /health` serve para a readiness probe;
   - a porta é 8000.
 - **`front/`:** React com Vite nas mesmas quatro camadas. A URL da API entra por `VITE_API_URL` no build, e o resultado é publicado no bucket S3 (site estático em HTTP).
+- **`.github/workflows/pipeline.yml`** (workflow "Pipeline"): roda em todo push na `main` (e manualmente).
+  - job `ci`: valida o back, o front e o Terraform;
+  - job `cd`: faz o build da imagem, o push no ECR e o `kubectl set image` no EKS, autenticando por OIDC (sem chave de acesso guardada);
+  - o módulo `infra/modules/cicd` cria o provedor OIDC, o papel IAM `santo-projeto-github` e o acesso ao cluster (`AmazonEKSEditPolicy` no namespace `default`); variável `repositorio_github`, saída `papel_cicd`;
+  - o segredo `AWS_PAPEL_CICD` é criado pelo `preparar.sh` e apagado pelo `destruir.sh`; sem ele o `cd` imprime "Infra desligada: deploy pulado" e termina verde.
 - **`scripts/`** (bash, só macOS):
   - `preparar.sh`: `terraform apply`, push da `back:v1` (amd64) para o ECR, kubeconfig, e troca do placeholder `URL-DO-REPOSITORIO` em `back/k8s/deployment.yaml`, que não deve ser commitada com a URL real.
   - `publicar-imagens.sh`: `v1` e `v2` multi-arquitetura no GHCR e uma cópia de `kindest/node`.
   - `destruir.sh`: primeiro os recursos k8s (para o load balancer não ficar órfão), depois o `terraform destroy`, e restaura o placeholder.
+  - `preparar.sh` também grava o segredo `AWS_PAPEL_CICD` (gh) e o `destruir.sh` o apaga antes do destroy.
   - `conferir.sh`: só lê; sai com 1 se sobrou recurso do projeto.
 
 ## Imagens
@@ -69,6 +76,11 @@ scripts/preparar.sh
 scripts/destruir.sh        # sempre ao terminar; termina chamando conferir.sh
 scripts/conferir.sh
 
+# pipeline (demo da aula): só o arquivo da mensagem
+git commit -m "versao 3" back/app/application/obter_saudacao.py && git push
+git revert HEAD --no-edit && git push     # desfaz
+# acompanhar: https://github.com/Izaiasjun1Dev/santo-projeto/actions
+
 # imagens públicas (pede GITHUB_USER e GITHUB_TOKEN com write:packages no ambiente)
 scripts/publicar-imagens.sh
 ```
@@ -78,6 +90,7 @@ Não há suíte de testes automatizados (não objetivo da spec). A verificação
 ## Regras deste projeto
 
 - **Infraestrutura na AWS nunca fica de pé sem acompanhamento.** O EKS, o NAT e o load balancer cobram por hora. Se travar e não houver correção em cerca de 30 minutos, rode `scripts/destruir.sh` e confira com `scripts/conferir.sh`.
+- **Na demo do pipeline, commite só o arquivo da mensagem:** `git commit -m "versao 3" back/app/application/obter_saudacao.py`. Nunca `git commit -am`: depois do `preparar.sh` o `back/k8s/deployment.yaml` tem a URL real do ECR, com o ID da conta.
 - **Nunca desligue o bloqueio de acesso público do S3 da conta.** Se ele estiver ligado, o módulo `site` sai e o front roda local (decisão do professor).
 - **O ID da conta AWS nunca entra em arquivo versionado,** porque o repositório é público. Na tela ele pode aparecer.
 - **Os alunos usam Windows com WSL.** Comandos destinados a eles devem funcionar no bash do WSL.
