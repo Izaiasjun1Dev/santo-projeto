@@ -181,6 +181,35 @@ while IFS=$'\t' read -r nome_alias chave; do
   fi
 done <<< "$ALIASES"
 
+# IAM é global (sem região). Papel do CD: NoSuchEntity só quer dizer que não existe.
+PAPEL="$PROJETO-github"
+R="$(aws --output json iam get-role --role-name "$PAPEL" 2>"$ERRO" </dev/null)" || {
+  if grep -q NoSuchEntity "$ERRO"; then
+    R='{}'
+  else
+    echo "falha na checagem: iam get-role" >&2
+    head -n 1 "$ERRO" >&2
+    exit 2
+  fi
+}
+processar "papel iam" -r '.Role.RoleName // empty | "P\tpapel iam: " + .'
+registrar <<< "$J"
+
+# Provedor OIDC do GitHub Actions: conta se tiver a tag Projeto=santo-projeto.
+chamar "iam list-open-id-connect-providers" iam list-open-id-connect-providers
+processar "provedores oidc" '.OpenIDConnectProviderList[]?.Arn'
+PROVEDORES="$J"
+while IFS= read -r arn; do
+  [ -n "$arn" ] || continue
+  case "$arn" in *token.actions.githubusercontent.com) ;; *) continue ;; esac
+  chamar "iam list-open-id-connect-provider-tags" iam list-open-id-connect-provider-tags \
+    --open-id-connect-provider-arn "$arn"
+  processar "tags do provedor oidc" --arg projeto "$PROJETO" '
+    (if ((.Tags // []) | any(.Key == "Projeto" and .Value == $projeto))
+    then "P" else "O" end) + "\tprovedor oidc: token.actions.githubusercontent.com"'
+  registrar <<< "$J"
+done <<< "$PROVEDORES"
+
 # Relatório.
 if [ -n "$OUTROS" ]; then
   echo "outros recursos na região (sem a marca do projeto, não contam):"
