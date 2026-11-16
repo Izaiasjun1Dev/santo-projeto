@@ -28,29 +28,39 @@ Execute os comandos abaixo no **terminal WSL (bash)**, não no PowerShell nem no
 1. Clone o repositório:
 
    ```bash
-   git clone https://github.com/USUARIO-GITHUB/santo-projeto.git
+   git clone https://github.com/Izaiasjun1Dev/santo-projeto.git
    cd santo-projeto
    ```
 
 2. Crie o cluster com a imagem de nó do GHCR:
 
    ```bash
-   kind create cluster --name aula --image ghcr.io/USUARIO-GITHUB/kindest-node:TAG-DO-KIND
+   kind create cluster --name aula --image ghcr.io/izaiasjun1dev/kindest-node:v1.37.0
    ```
 
 3. Siga os sete passos do Guia. Os comandos principais são:
 
    ```bash
-   kubectl create deployment back --image=ghcr.io/USUARIO-GITHUB/santo-projeto-back:v1 --replicas=2 --port=8000
-   kubectl port-forward deployment/back 8000:8000      # deixe rodando em outro terminal
-   curl localhost:8000/api/saudacao
+   kubectl create deployment back --image=ghcr.io/izaiasjun1dev/santo-projeto-back:v1 --replicas=2 --port=8000
    kubectl scale deployment back --replicas=6
    kubectl delete pod NOME                              # NOME de um pod listado em: kubectl get pods
-   kubectl set image deployment/back '*=ghcr.io/USUARIO-GITHUB/santo-projeto-back:v2'
+   kubectl set image deployment/back '*=ghcr.io/izaiasjun1dev/santo-projeto-back:v2'
    kubectl rollout undo deployment/back
    ```
 
-   O `port-forward` cai quando o pod que ele usa é apagado ou substituído (por exemplo, no `delete pod` ou no `set image`). Nesse caso, rode o comando de novo.
+   Para chamar a API, abra **um segundo terminal** (WSL) e deixe o `port-forward` rodando nele:
+
+   ```bash
+   # Terminal 2
+   kubectl port-forward deployment/back 8000:8000
+   ```
+
+   ```bash
+   # Terminal 1
+   curl localhost:8000/api/saudacao
+   ```
+
+   Depois de apagar um pod, trocar a imagem ou voltar a versão, o `port-forward` não encerra na hora: o próximo `curl` falha (`Empty reply from server`) e só então o terminal 2 mostra `error: lost connection to pod`. Se o `curl` falhar, aperte Ctrl+C no terminal do `port-forward` e rode-o de novo.
 
 ## Atenção: custo na AWS
 

@@ -13,6 +13,15 @@ Feita em 16/11, perfil `default`, região `us-east-1`.
 
 ## kind
 
+Máquina: Mac ARM do professor fazendo o papel do aluno. kind v0.33.0, Docker 29.9.3. Imagem do nó: `ghcr.io/izaiasjun1dev/kindest-node:v1.37.0` (Kubernetes v1.37.0); imagem da API: `ghcr.io/izaiasjun1dev/santo-projeto-back:v1`/`:v2`. Os dois pulls funcionaram anonimamente (depois de `docker logout ghcr.io`).
+
+- `kind create cluster --name aula --image ghcr.io/izaiasjun1dev/kindest-node:v1.37.0`: 36 s no total, com o pull do nó.
+- `kubectl get nodes`: logo após o create o nó aparece `NotReady`; com ~25 s fica `Ready`.
+- Os sete passos do Guia funcionaram: 2 pods `Running` em 9 a 10 s; `curl` devolve a mensagem e o nome do pod; `scale` para 6 em menos de 13 s; `delete pod` cria o substituto; `set image` completa em ~30 s e responde `versao 2`; `rollout undo` volta à `versao 1`. No kind a coluna `NODE` é igual para todos os pods (um nó só).
+- **`port-forward` depois dos passos 5, 6 e 7:** o processo continua vivo e silencioso. O primeiro `curl` seguinte falha (`Empty reply from server`, ou timeout no passo 7); só então o terminal do `port-forward` imprime `error: lost connection to pod` e sai. Rodar o `port-forward` de novo resolve. Subir um segundo antes de o primeiro cair dá `address already in use`: Ctrl+C no primeiro.
+- Desafio (3 réplicas): o substituto do pod apagado ficou `Running` em 0,5 s (imagem já no nó, API encerra no SIGTERM); com cronômetro de mão, 1 a 3 s.
+- Limpeza: `kubectl delete deployment back && kind delete cluster --name aula`; `kind get clusters` devolve `No kind clusters found.`
+
 ## AWS
 
 Ensaio técnico em 16/11, das 17:53 às 19:00, em duas rodadas completas. Versões resolvidas: provider aws 6.73.0, módulo vpc 6.7.3, módulo eks 21.29.0, Kubernetes 1.37.
@@ -77,5 +86,54 @@ Preços on-demand em `us-east-1` (AWS Pricing API, 16/11): EKS US$ 0,10/h por cl
 - **Roteiro › Parte 2, passo 2:** o endereço respondeu em 85 a 103 s, menos que os "2 a 3 minutos" do texto; manter a orientação de seguir para o passo 3. O load balancer criado é um Classic Load Balancer, sem configuração extra no cluster (o plano B do `port-forward` não foi necessário na AWS).
 - **Roteiro › Parte 2, passo 9:** o `kubectl rollout undo` (kubectl 1.36) imprime um aviso sobre `last-applied-configuration` porque o deployment foi criado com `kubectl apply`. É inofensivo; vale avisar para ninguém se assustar no projetor.
 - **Roteiro › Parte 2, passo 6:** a página do front usa o estilo padrão do navegador e fica pequena no projetor; dar zoom no navegador (Cmd +) antes de clicar.
+- **Guia › passo 5:** trocar a frase final por: "O `port-forward` do terminal 3 vai parar de funcionar: o próximo `curl` falha (`Empty reply from server`) e o terminal 3 mostra `error: lost connection to pod`. Aperte Ctrl+C no terminal 3 se ele ainda estiver rodando, rode de novo o passo 3 e veja que agora outro pod responde." O Guia diz "cai junto", mas o processo só sai depois da primeira chamada que falha.
+- **Guia › passos 6 e 7:** acrescentar "Se o `curl` falhar de novo (`Empty reply`, ou ficar parado), é o mesmo caso do passo 5: Ctrl+C no terminal 3 e rode o passo 3 outra vez." No passo 7 o `curl` pode dar timeout em vez de erro imediato.
+- **Guia › Antes de começar:** depois do `kubectl get nodes`, acrescentar "Se aparecer `NotReady`, espere uns 20 segundos e rode de novo."
+- **Guia › passo 2:** acrescentar "No kind só existe um nó, então a coluna `NODE` é igual para todos os pods." (opcional)
+- **Guia › Desafio, item 4:** com a imagem já no nó o substituto fica `Running` em menos de 1 s; avisar que o tempo é "alguns segundos". (opcional)
 
 ## Rodada do professor
+
+Plano B: sua própria rodada gravada, caso a demonstração ao vivo falhe. Ela custa cerca de US$ 0,60 a US$ 1 por 2 h de infraestrutura de pé. Não deixe nada ligado ao terminar.
+
+**Antes de começar**
+
+- [ ] Perfil `default` da AWS com permissão (`aws eks list-clusters --region us-east-1` sem erro) e Docker Desktop aberto.
+- [ ] Gravação de tela ligada, terminal com fonte grande.
+- [ ] Um segundo terminal reservado para `kubectl get pods -w`.
+
+**Subir (15 a 17 min)**
+
+- [ ] `scripts/preparar.sh`. Espere 15 a 17 min (o EKS sozinho leva ~11 min) e confirme o resumo final com cluster, ECR, bucket e site.
+
+**Parte 1: Terraform** (na pasta `infra/`)
+
+- [ ] Mostre a árvore e siga `repositorios` de `envs/aula.tfvars` até `modules/ecr`.
+- [ ] `terraform plan -var-file=envs/aula.tfvars` (`No changes.`) e `terraform output`.
+- [ ] Edite o `.tfvars` para `repositorios = ["back", "teste-aluno"]`, rode `plan` (`1 to add`) e `terraform apply -var-file=envs/aula.tfvars` (segundos). Mostre o repositório novo no console do ECR.
+- [ ] Desfaça com `git checkout envs/aula.tfvars` e rode o `apply` de novo (`1 destroyed`).
+
+**Parte 2: Kubernetes e front** (na raiz do projeto, `kubectl get pods -w` no outro terminal)
+
+- [ ] `kubectl apply -f back/k8s/` e `kubectl get service back`. O endereço respondeu em 85 a 103 s; siga para o próximo passo enquanto isso.
+- [ ] `kubectl scale deployment back --replicas=6` e `kubectl get pods -o wide`.
+- [ ] `curl http://ENDERECO/api/saudacao` em laço: aparecem vários nomes de pod.
+- [ ] `cd front && npm install && VITE_API_URL=http://ENDERECO npm run build`.
+- [ ] `aws s3 sync dist/ s3://$(terraform -chdir=../infra output -raw bucket_site) --delete`, e abra a `url_site`. Dê zoom no navegador (Cmd +) antes de clicar em "Chamar a API". O navegador reaproveita a conexão e pode repetir o pod; use o `curl` em laço para mostrar a distribuição.
+- [ ] `kubectl delete pod NOME-DO-POD` (o que apareceu na página): o substituto nasce em ~4 s.
+- [ ] Versão 2: mude a mensagem em `back/app/application/obter_saudacao.py`, faça build e push de `$REPO:v2` e rode `kubectl set image deployment/back back=$REPO:v2` (troca em ~25 s). Clique durante a troca. Depois, `git checkout back/app/application/obter_saudacao.py`.
+- [ ] `kubectl rollout undo deployment/back` (o aviso sobre `last-applied-configuration` é inofensivo).
+
+**Destruir (~13 min)**
+
+- [ ] `scripts/destruir.sh`. Espere ~13 min; ele apaga o load balancer antes do `terraform destroy`.
+
+**Conferir no fim**
+
+- [ ] `scripts/conferir.sh` termina com `nada sobrando` e saída 0.
+- [ ] `git status` limpo: `back/k8s/deployment.yaml` voltou ao placeholder `URL-DO-REPOSITORIO` e `infra/envs/aula.tfvars` está como no repositório.
+
+**Se algo der errado**
+
+- Chrome mostrando página de erro no site HTTP do S3: verifique "Sempre usar conexões seguras" (modo somente HTTPS) nas configurações do navegador. Aconteceu uma vez no ensaio; o `curl` na `url_site` confirma que o site responde.
+- Travou e sem correção em cerca de 30 min: rode `scripts/destruir.sh` e depois `scripts/conferir.sh`.
