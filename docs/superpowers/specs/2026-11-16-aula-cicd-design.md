@@ -42,11 +42,12 @@ O professor quer acrescentar um bloco de CI/CD à aula. A turma assiste a um cic
 
 - Novo módulo `infra/modules/cicd/` com `main.tf`, `variables.tf` e `outputs.tf` (mesmo formato dos outros), chamado da raiz.
   - `aws_iam_openid_connect_provider` para `https://token.actions.githubusercontent.com`, audiência `sts.amazonaws.com`. (A conta hoje não tem nenhum provedor OIDC; o Terraform cria e destrói.)
-  - `aws_iam_role` com nome derivado do projeto (ex.: `santo-projeto-github`), confiança só para `repo:Izaiasjun1Dev/santo-projeto:ref:refs/heads/main` com `aud = sts.amazonaws.com`.
+  - `aws_iam_role` com nome derivado do projeto (ex.: `santo-projeto-github`), confiança só para o `sub` que o token do GitHub realmente carrega (formato imutável, `repo:<dono>@<id>/<repo>@<id>:ref:refs/heads/main`, guardado na variável `sub_github`), com `aud = sts.amazonaws.com`.
+  - Atualização de 16/11 (ensaio): o GitHub emite o token deste repositório com o `sub` imutável (IDs numéricos), então o `sub` simples `repo:Izaiasjun1Dev/santo-projeto:...` era recusado no `AssumeRoleWithWebIdentity`.
   - Política do papel: `ecr:GetAuthorizationToken` (recurso `*`), as ações de push só no repositório ECR `back`, e `eks:DescribeCluster` no cluster da aula.
   - Acesso ao Kubernetes por **EKS access entry** (`aws_eks_access_entry` + `aws_eks_access_policy_association` com `AmazonEKSEditPolicy`, escopo namespace `default`). Fica no módulo `cicd`, que recebe o nome do cluster do módulo `eks` (assim não há dependência circular).
   - Saída: `arn_papel`.
-- Raiz: nova variável `repositorio_github` (`"Izaiasjun1Dev/santo-projeto"` no `envs/aula.tfvars`), passada ao módulo; nova saída `papel_cicd`. As tags `Projeto` vêm do `default_tags`, como o resto.
+- Raiz: nova variável `repositorio_github` (`"Izaiasjun1Dev/santo-projeto"` no `envs/aula.tfvars`), usada pelos scripts (o módulo recebe `sub_github`, não ela); nova variável `sub_github` (`"repo:Izaiasjun1Dev@44451704/santo-projeto@1460652243"`); nova saída `papel_cicd`. As tags `Projeto` vêm do `default_tags`, como o resto.
 - O módulo `ecr` pode ganhar uma saída `arns` se o `cicd` precisar do ARN do repositório (escolha do construtor).
 - O exercício "siga a variável" (`repositorios`) não muda.
 

@@ -7,4 +7,5 @@ repositorios       = ["back"]
 tipo_instancia     = "t3.medium"
 quantidade_nos     = 2
 repositorio_github = "Izaiasjun1Dev/santo-projeto"
-sub_github         = "repo:Izaiasjun1Dev@44451704/santo-projeto@1460652243"
+# sub do token OIDC do GitHub (formato imutável, com os IDs numéricos do dono e do repositório)
+sub_github = "repo:Izaiasjun1Dev@44451704/santo-projeto@1460652243"
