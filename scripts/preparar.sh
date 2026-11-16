@@ -26,7 +26,7 @@ docker info >/dev/null 2>&1 \
   || { echo "Abra o Docker Desktop e rode de novo." >&2; exit 1; }
 grep -q "versao 1" back/app/application/obter_saudacao.py \
   || { echo "A mensagem não está na versão 1; rode: git checkout back/app/application/obter_saudacao.py" >&2; exit 1; }
-gh auth status >/dev/null 2>&1 \
+gh auth status --hostname github.com >/dev/null 2>&1 \
   || { echo "O gh não está logado; rode: gh auth login" >&2; exit 1; }
 echo "Ferramentas, Docker, gh e credenciais OK."
 
@@ -41,7 +41,10 @@ URL_ECR=$($TF output -json repositorios | jq -r '.back')
 # 3. Liga o CD: grava o ARN do papel como segredo do repositório (o ARN não é impresso)
 echo "==> 3/7 Gravando o segredo AWS_PAPEL_CICD no GitHub"
 CD_LIGADO="CD desligado (segredo não gravado)"
-if gh secret set AWS_PAPEL_CICD --repo "$REPO_GITHUB" --body "$($TF output -raw papel_cicd)" >/dev/null 2>&1; then
+PAPEL=$($TF output -raw papel_cicd 2>/dev/null || true)
+if [ -z "$PAPEL" ]; then
+  echo "AVISO: saída papel_cicd vazia; CD desligado." >&2
+elif gh secret set AWS_PAPEL_CICD --repo "$REPO_GITHUB" --body "$PAPEL" </dev/null >/dev/null 2>&1; then
   CD_LIGADO="CD ligado"
 else
   echo "AVISO: não consegui gravar o segredo. Grave à mão:" >&2
