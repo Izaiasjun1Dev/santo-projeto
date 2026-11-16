@@ -3,6 +3,11 @@
 # Saída: 0 = nada sobrando, 1 = sobrou algo do projeto, 2 = uma checagem falhou.
 # Compatível com o bash 3.2 do macOS. Nunca imprime credenciais.
 
+set -uo pipefail
+
+command -v jq >/dev/null 2>&1 || { echo "falha: jq não está instalado" >&2; exit 2; }
+command -v aws >/dev/null 2>&1 || { echo "falha: aws cli não está instalado" >&2; exit 2; }
+
 REGIAO="us-east-1"
 PROJETO="santo-projeto"
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -21,6 +26,17 @@ chamar() {
     exit 2
   }
   [ -n "$R" ] || R='{}'
+}
+
+# processar <checagem> <args do jq...>: roda o jq sobre $R, guarda em $J; se falhar, sai com 2.
+processar() {
+  local nome="$1"
+  shift
+  J="$(printf '%s' "$R" | jq -r "$@" 2>"$ERRO")" || {
+    echo "falha ao processar: $nome" >&2
+    head -n 1 "$ERRO" >&2
+    exit 2
+  }
 }
 
 PROJ=""    # sobras do projeto, uma por linha
@@ -44,7 +60,7 @@ DEFS='
 def tem($k): (.Tags // []) | any(.Key == $k);
 def tag($k): ((.Tags // []) | map(select(.Key == $k)) | .[0].Value) // "";
 def doprojeto: (tag("Projeto") == $projeto) or tem("kubernetes.io/cluster/" + $projeto);
-def emvpc($v): ($v != null) and (($vpcs | split("\n") | index($v)) != null);
+def emvpc($v): (($v // "") != "") and (($vpcs | split("\n") | index($v)) != null);
 '
 
 # Repositórios ECR do projeto, lidos de infra/envs/aula.tfvars.
@@ -54,102 +70,114 @@ REPOS="$(grep '^repositorios' "$TFVARS" | grep -o '"[^"]*"' | tr -d '"')"
 
 # VPCs do projeto (para NAT, EIP, instâncias e load balancers sem tag).
 chamar "ec2 describe-vpcs" ec2 describe-vpcs --filters "Name=tag:Projeto,Values=$PROJETO"
-VPCS="$(echo "$R" | jq -r '.Vpcs[].VpcId')"
+processar "vpcs" '.Vpcs[].VpcId'
+VPCS="$J"
 
 # EC2 não terminadas.
 chamar "ec2 describe-instances" ec2 describe-instances \
   --filters "Name=instance-state-name,Values=pending,running,stopping,stopped,shutting-down"
-registrar <<< "$(echo "$R" | jq -r --arg projeto "$PROJETO" --arg vpcs "$VPCS" "$DEFS"'
+processar "instâncias ec2" --arg projeto "$PROJETO" --arg vpcs "$VPCS" "$DEFS"'
   .Reservations[].Instances[]
   | (doprojeto or emvpc(.VpcId)) as $p
   | (if $p then "P" else "O" end) + "\tec2: " + .InstanceId
-    + (if tag("Name") != "" then " (" + tag("Name") + ")" else "" end)')"
+    + (if tag("Name") != "" then " (" + tag("Name") + ")" else "" end)'
+registrar <<< "$J"
 
 # Load balancers v2 (ALB/NLB).
 chamar "elbv2 describe-load-balancers" elbv2 describe-load-balancers
-LBS="$(echo "$R" | jq -r '.LoadBalancers[] | [.LoadBalancerArn, .LoadBalancerName, (.VpcId // "")] | @tsv')"
+processar "lista de load balancers v2" '.LoadBalancers[] | [.LoadBalancerArn, .LoadBalancerName, (.VpcId // "")] | @tsv'
+LBS="$J"
 while IFS=$'\t' read -r arn nome vpc; do
   [ -n "$arn" ] || continue
   chamar "elbv2 describe-tags ($nome)" elbv2 describe-tags --resource-arns "$arn"
-  m="$(echo "$R" | jq -r --arg projeto "$PROJETO" --arg vpcs "$VPCS" --arg vpc "$vpc" "$DEFS"'
-    (.TagDescriptions[0] // {}) | if doprojeto or emvpc($vpc) then "P" else "O" end')"
-  registrar <<< "$m"$'\t'"load balancer v2: $nome"
+  processar "tags de $nome" --arg projeto "$PROJETO" --arg vpcs "$VPCS" --arg vpc "$vpc" "$DEFS"'
+    (.TagDescriptions[0] // {}) | if doprojeto or emvpc($vpc) then "P" else "O" end'
+  registrar <<< "$J"$'\t'"load balancer v2: $nome"
 done <<< "$LBS"
 
 # Load balancers clássicos.
 chamar "elb describe-load-balancers" elb describe-load-balancers
-LBS="$(echo "$R" | jq -r '.LoadBalancerDescriptions[] | [.LoadBalancerName, (.VPCId // "")] | @tsv')"
+processar "lista de load balancers clássicos" '.LoadBalancerDescriptions[] | [.LoadBalancerName, (.VPCId // "")] | @tsv'
+LBS="$J"
 while IFS=$'\t' read -r nome vpc; do
   [ -n "$nome" ] || continue
   chamar "elb describe-tags ($nome)" elb describe-tags --load-balancer-names "$nome"
-  m="$(echo "$R" | jq -r --arg projeto "$PROJETO" --arg vpcs "$VPCS" --arg vpc "$vpc" "$DEFS"'
-    (.TagDescriptions[0] // {}) | if doprojeto or emvpc($vpc) then "P" else "O" end')"
-  registrar <<< "$m"$'\t'"load balancer clássico: $nome"
+  processar "tags de $nome" --arg projeto "$PROJETO" --arg vpcs "$VPCS" --arg vpc "$vpc" "$DEFS"'
+    (.TagDescriptions[0] // {}) | if doprojeto or emvpc($vpc) then "P" else "O" end'
+  registrar <<< "$J"$'\t'"load balancer clássico: $nome"
 done <<< "$LBS"
 
 # NAT Gateways não deleted.
 chamar "ec2 describe-nat-gateways" ec2 describe-nat-gateways \
   --filter "Name=state,Values=pending,available,deleting,failed"
-NATS="$R"
-registrar <<< "$(echo "$NATS" | jq -r --arg projeto "$PROJETO" --arg vpcs "$VPCS" "$DEFS"'
+processar "nat gateways" --arg projeto "$PROJETO" --arg vpcs "$VPCS" "$DEFS"'
   .NatGateways[]
   | (tag("Projeto") == $projeto or emvpc(.VpcId)) as $p
-  | (if $p then "P" else "O" end) + "\tnat gateway: " + .NatGatewayId')"
+  | (if $p then "P" else "O" end) + "\tnat gateway: " + .NatGatewayId'
+registrar <<< "$J"
 # Alocações de EIP usadas por NATs do projeto (EIP sem tag, mas na VPC do projeto).
-ALOCS="$(echo "$NATS" | jq -r --arg projeto "$PROJETO" --arg vpcs "$VPCS" "$DEFS"'
+processar "alocações de eip dos nats" --arg projeto "$PROJETO" --arg vpcs "$VPCS" "$DEFS"'
   .NatGateways[] | select(tag("Projeto") == $projeto or emvpc(.VpcId))
-  | .NatGatewayAddresses[]?.AllocationId')"
+  | .NatGatewayAddresses[]?.AllocationId'
+ALOCS="$J"
 
 # Elastic IPs.
 chamar "ec2 describe-addresses" ec2 describe-addresses
-registrar <<< "$(echo "$R" | jq -r --arg projeto "$PROJETO" --arg alocs "$ALOCS" "$DEFS"'
+processar "elastic ips" --arg projeto "$PROJETO" --arg vpcs "$VPCS" --arg alocs "$ALOCS" "$DEFS"'
   .Addresses[] | (.AllocationId // "") as $id
   | (tag("Projeto") == $projeto or (($alocs | split("\n") | index($id)) != null)) as $p
   | (if $p then "P" else "O" end) + "\telastic ip: " + (.AllocationId // .PublicIp)
-    + " (" + (.PublicIp // "") + ")"')"
+    + " (" + (.PublicIp // "") + ")"'
+registrar <<< "$J"
 
 # Cluster EKS.
 chamar "eks list-clusters" eks list-clusters
-registrar <<< "$(echo "$R" | jq -r --arg projeto "$PROJETO" '
-  .clusters[]? | (if . == $projeto then "P" else "O" end) + "\tcluster eks: " + .')"
+processar "clusters eks" --arg projeto "$PROJETO" '
+  .clusters[]? | (if . == $projeto then "P" else "O" end) + "\tcluster eks: " + .'
+registrar <<< "$J"
 
 # Repositórios ECR.
 chamar "ecr describe-repositories" ecr describe-repositories
-registrar <<< "$(echo "$R" | jq -r --arg repos "$REPOS" '
+processar "repositórios ecr" --arg repos "$REPOS" '
   .repositories[]? | .repositoryName as $n
   | (if (($repos | split("\n") | index($n)) != null)
-    then "P" else "O" end) + "\trepositório ecr: " + .repositoryName')"
+    then "P" else "O" end) + "\trepositório ecr: " + .repositoryName'
+registrar <<< "$J"
 
 # Buckets S3.
 chamar "s3api list-buckets" s3api list-buckets
-registrar <<< "$(echo "$R" | jq -r --arg projeto "$PROJETO" '
+processar "buckets s3" --arg projeto "$PROJETO" '
   .Buckets[]? | (if (.Name | startswith($projeto)) then "P" else "O" end)
-    + "\tbucket s3: " + .Name')"
+    + "\tbucket s3: " + .Name'
+registrar <<< "$J"
 
 # Grupos de log do EKS.
 chamar "logs describe-log-groups" logs describe-log-groups --log-group-name-prefix "/aws/eks/"
-registrar <<< "$(echo "$R" | jq -r --arg projeto "$PROJETO" '
+processar "grupos de log" --arg projeto "$PROJETO" '
   .logGroups[]? | (if (.logGroupName | startswith("/aws/eks/" + $projeto + "/")) or
     .logGroupName == "/aws/eks/" + $projeto then "P" else "O" end)
-    + "\tgrupo de log: " + .logGroupName')"
+    + "\tgrupo de log: " + .logGroupName'
+registrar <<< "$J"
 
 # Aliases KMS (aliases alias/aws/* são das chaves gerenciadas pela AWS e ficam de fora).
 chamar "kms list-aliases" kms list-aliases
-ALIASES="$(echo "$R" | jq -r '.Aliases[]? | select(.AliasName | startswith("alias/aws/") | not)
-  | [.AliasName, (.TargetKeyId // "")] | @tsv')"
-while IFS=$'\t' read -r alias chave; do
-  [ -n "$alias" ] || continue
-  if [[ "$alias" == alias/eks/$PROJETO* ]]; then
+processar "aliases kms" '.Aliases[]? | select(.AliasName | startswith("alias/aws/") | not)
+  | [.AliasName, (.TargetKeyId // "")] | @tsv'
+ALIASES="$J"
+while IFS=$'\t' read -r nome_alias chave; do
+  [ -n "$nome_alias" ] || continue
+  if [[ "$nome_alias" == alias/eks/$PROJETO* ]]; then
     estado=""
     if [ -n "$chave" ]; then
-      chamar "kms describe-key ($alias)" kms describe-key --key-id "$chave"
-      estado="$(echo "$R" | jq -r '.KeyMetadata.KeyState')"
+      chamar "kms describe-key ($nome_alias)" kms describe-key --key-id "$chave"
+      processar "estado da chave $chave" '.KeyMetadata.KeyState'
+      estado="$J"
     fi
     if [ "$estado" != "PendingDeletion" ]; then
-      PROJ="${PROJ}alias kms: $alias"$'\n'
+      PROJ="${PROJ}alias kms: $nome_alias"$'\n'
     fi
   else
-    OUTROS="${OUTROS}alias kms: $alias"$'\n'
+    OUTROS="${OUTROS}alias kms: $nome_alias"$'\n'
   fi
 done <<< "$ALIASES"
 
