@@ -86,7 +86,38 @@ Preços on-demand em `us-east-1` (AWS Pricing API, 16/11): EKS US$ 0,10/h por cl
 
 ## CI/CD
 
-Pendente: ensaio do pipeline (Task 6).
+Ensaio técnico em 16/11, das 20:10 às 20:51, com o workflow `Pipeline` (`.github/workflows/pipeline.yml`) no repositório público. Infraestrutura de pé por ~40 min; load balancer por ~9 min.
+
+| Etapa | Resultado | Tempo |
+|---|---|---|
+| Push do merge com a infra desligada (run 43976562360) | `ci` verde; `cd` verde com `Infra desligada: deploy pulado` | |
+| `scripts/preparar.sh`, 1ª tentativa | Falhou ao criar o cluster: `InvalidParameterException: Access denied to KMS key ... due to explicit deny policy or revoked grant`. A chave KMS tinha acabado de ser criada (23 s antes); o resto da rede, inclusive o NAT, já estava de pé. Correção abaixo. | 2 min 27 s |
+| `scripts/preparar.sh`, 2ª tentativa | `saida=0`, `Apply complete! Resources: 14 added`, dois nós `Ready`, resumo com `Deploy:   CD ligado`; `gh secret list` mostra `AWS_PAPEL_CICD` | **17 min 1 s** (cluster 14 min 0 s, node group 58 s) |
+| `kubectl apply -f back/k8s/` | 2 pods `Running`; o endereço do LB respondeu `versao 1` | **98 s** depois do `apply` |
+| `git commit -m "versao 3" back/app/application/obter_saudacao.py` e `git push` (run 43980085381) | `ci` verde (19 s); `cd` **falhou** no passo "Entrar na AWS (OIDC, sem senha)": `Could not assume role with OIDC: Not authorized to perform sts:AssumeRoleWithWebIdentity`, depois de 12 tentativas. O LB continuou na `versao 1`. Correção abaixo. | 1 min 44 s (o `cd` gastou 71 s nas tentativas) |
+| Correção do papel: `terraform apply` | `Plan: 0 to add, 1 to change`; só a confiança do papel `santo-projeto-github` mudou | 12 s |
+| Push da correção (run 43980594231, já com a `versao 3`) | `ci` e `cd` verdes; `curl` no LB logo em seguida: `versao 3`, dois pods novos; imagem `back:a650479` (7 caracteres do commit) | **60 s** do run (do push ao LB respondendo, ~65 s) |
+| ↳ `ci` | lint, build do front e build da imagem | 16 s |
+| ↳ `cd` | login OIDC 1 s, build e push amd64 13 s, `kubectl apply` 5 s, `rollout status` 9 s | 39 s |
+| `git revert` da `versao 3` e `git push` (run 43980780655) | `ci` e `cd` verdes; LB de volta à `versao 1` logo em seguida, imagem `back:ada5109` | **69 s** do run |
+| ↳ `ci` / `cd` | `cd`: build e push 24 s, `apply` 10 s, `rollout` 6 s | 18 s / 46 s |
+| Máscara do ID da conta no log público (`gh run view <id> --log`) | o ID da conta aparece **0 vezes** nos três runs com a infra de pé; o registro aparece como `***.dkr.ecr.us-east-1.amazonaws.com` e o papel como `***`. As sequências de 12 dígitos que o `grep -E '[0-9]{12}'` acha (17, 15 e 9) estão todas dentro de hashes `sha256` e SHAs de commit | |
+| `scripts/destruir.sh` | LB removido, `Segredo apagado.`, `Destroy complete! Resources: 65 destroyed.`, `nada sobrando`, `saida=0`, `deployment.yaml` restaurado; `gh secret list` vazio | **12 min 5 s** (node group 8 min 18 s, cluster 2 min 41 s, NAT 1 min 12 s) |
+
+No ensaio, o revert foi `git revert 84fa69d` (o hash do commit `versao 3`), porque o commit da correção entrou depois dele. Na aula, sem correção no meio, o `git revert HEAD --no-edit` do Roteiro desfaz a `versao 3`.
+
+### O que falhou e como foi corrigido
+
+1. **O GitHub não conseguia assumir o papel do CD** (`Not authorized to perform sts:AssumeRoleWithWebIdentity`). A confiança do papel esperava o `sub` `repo:Izaiasjun1Dev/santo-projeto:ref:refs/heads/main`, mas este repositório usa o formato imutável do GitHub, com os IDs do dono e do repositório: `repo:Izaiasjun1Dev@44451704/santo-projeto@1460652243:ref:refs/heads/main` (confere-se com `gh api repos/Izaiasjun1Dev/santo-projeto/actions/oidc/customization/sub`, que devolve `"use_immutable_subject": true`). Correção: nova variável `sub_github` (raiz e módulo `cicd`), com o valor `"repo:Izaiasjun1Dev@44451704/santo-projeto@1460652243"` no `envs/aula.tfvars`; a condição do papel virou `"${var.sub_github}:ref:refs/heads/main"`. O módulo `cicd` deixou de receber `repositorio_github`, que continua na raiz porque os scripts a usam para gravar o segredo. Os IDs são do GitHub (públicos), não da AWS. Mantivemos a opção do GitHub ligada em vez de desligá-la, porque ela impede que um repositório recriado com o mesmo nome herde o acesso.
+2. **`preparar.sh` falhou uma vez com `Access denied to KMS key`** ao criar o cluster. É uma falha passageira da AWS (a chave recém-criada ainda não estava valendo para o EKS); rodar o `preparar.sh` de novo continuou de onde parou (14 recursos) e deu certo. Nenhum código mudou. Nas duas rodadas anteriores isso não aconteceu.
+
+Nada mais falhou: o workflow, o `destruir.sh` e o `conferir.sh` rodaram sem alteração.
+
+### Custo estimado
+
+Infraestrutura de pé ~40 min (20:10 às 20:51) e LB ~9 min, nos mesmos preços da seção AWS (cerca de US$ 0,27/h com tudo de pé), contando hora cheia para EKS, NAT e LB: **cerca de US$ 0,30**, abaixo de US$ 0,50. O GitHub Actions não cobra em repositório público; as imagens no ECR (alguns MB por poucos minutos) não pesam.
+
+No dia da aula, o bloco de CI/CD não aumenta o custo: usa a infra que já está de pé, e cada push leva ~1 min de pipeline.
 
 ## Mudanças para os docs
 
@@ -106,6 +137,9 @@ Pendente: ensaio do pipeline (Task 6).
 - **Guia › Desafio:** "em 15 minutos" vira "em 20 minutos".
 - **Roteiro › Cronograma (CI/CD):** o bloco de CI/CD entra às 10:40 (25 min): 10:40 CI/CD, 11:05 alunos nos sete passos no kind (30), 11:35 desafio (10), 11:45 encerramento com destroy ao vivo (15). Os blocos anteriores não mudam. Na demo: `git commit -m "versao 3" back/app/application/obter_saudacao.py` (só esse arquivo) e, para desfazer, `git revert HEAD --no-edit && git push`; acompanhar em https://github.com/Izaiasjun1Dev/santo-projeto/actions.
 - **Guia › Desafio: 20 → 10 minutos:** o desafio passa a ter 10 minutos (vinha de 20).
+- **Roteiro › Código: infra › Módulo cicd (ensaio do CI/CD):** a condição do papel trocou `"repo:${var.repositorio_github}:ref:refs/heads/main"` por `"${var.sub_github}:ref:refs/heads/main"`; o `modules/cicd/variables.tf` trocou `repositorio_github` por `sub_github`; na raiz, o `module "cicd"` passa `sub_github = var.sub_github` (no lugar de `repositorio_github`), o `variables.tf` ganhou `variable "sub_github"` e o `envs/aula.tfvars` ganhou `sub_github = "repo:Izaiasjun1Dev@44451704/santo-projeto@1460652243"`. Se o Roteiro explicar a confiança do papel, dizer que o GitHub identifica o repositório por `dono@id/nome@id` (formato imutável). O CLAUDE.md (linha do módulo `cicd`) também cita a variável `repositorio_github` e deve passar a citar `sub_github`.
+- **Roteiro › CI/CD:** do push ao LB respondendo a nova versão levou ~1 min (run de 60 a 69 s: `ci` ~17 s, `cd` ~40 s). Dá tempo de mostrar a aba Actions ao vivo e, logo depois, o `curl`. Se algum commit entrar depois do `versao 3`, o revert precisa do hash dele (`git revert <hash> --no-edit`), não de `HEAD`.
+- **Roteiro › Preparação:** se o `preparar.sh` parar com `Access denied to KMS key ... explicit deny policy or revoked grant`, é passageiro: rode o `preparar.sh` de novo (ele continua de onde parou). No ensaio isso custou 2,5 min a mais; começar às 7h30 cobre.
 
 ## Rodada do professor
 
