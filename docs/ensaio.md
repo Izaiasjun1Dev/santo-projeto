@@ -121,7 +121,16 @@ Plano B: sua própria rodada gravada, caso a demonstração ao vivo falhe. Ela c
 - [ ] `cd front && npm install && VITE_API_URL=http://ENDERECO npm run build`.
 - [ ] `aws s3 sync dist/ s3://$(terraform -chdir=../infra output -raw bucket_site) --delete`, e abra a `url_site`. Dê zoom no navegador (Cmd +) antes de clicar em "Chamar a API". O navegador reaproveita a conexão e pode repetir o pod; use o `curl` em laço para mostrar a distribuição.
 - [ ] `kubectl delete pod NOME-DO-POD` (o que apareceu na página): o substituto nasce em ~4 s.
-- [ ] Versão 2: mude a mensagem em `back/app/application/obter_saudacao.py`, faça build e push de `$REPO:v2` e rode `kubectl set image deployment/back back=$REPO:v2` (troca em ~25 s). Clique durante a troca. Depois, `git checkout back/app/application/obter_saudacao.py`.
+- [ ] Versão 2 (volte para a raiz do projeto com `cd ..`, se ainda estiver em `front/`): mude a mensagem em `back/app/application/obter_saudacao.py` e rode:
+
+  ```bash
+  REPO=$(terraform -chdir=infra output -json repositorios | jq -r .back)
+  docker build --platform linux/amd64 -t $REPO:v2 back
+  docker push $REPO:v2
+  kubectl set image deployment/back back=$REPO:v2
+  ```
+
+  O `--platform linux/amd64` é obrigatório: seu Mac é ARM e os nós do EKS são x86; sem ele os pods dão `exec format error` ou `ImagePullBackOff`. O login no ECR feito pelo `preparar.sh` vale ~12 h; se a sessão for longa, refaça: `aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "${REPO%%/*}"`. A troca leva ~25 s; clique na página durante ela. Depois, `git checkout back/app/application/obter_saudacao.py`.
 - [ ] `kubectl rollout undo deployment/back` (o aviso sobre `last-applied-configuration` é inofensivo).
 
 **Destruir (~13 min)**
