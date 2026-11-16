@@ -56,7 +56,7 @@ module "cicd" {
   source = "./modules/cicd"
 
   nome                = var.projeto
-  repositorio_github  = var.repositorio_github
+  sub_github          = var.sub_github
   nome_cluster        = module.eks.nome
   arn_cluster         = module.eks.arn
   arn_repositorio_ecr = module.ecr.arns["back"]
