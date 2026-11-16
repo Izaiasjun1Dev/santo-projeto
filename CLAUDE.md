@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## O que é este repositório
 
-Projeto didático de uma aula de 90 minutos (quarta, 18/11/2026) sobre AWS, Terraform e Kubernetes, para alunos iniciantes. O professor (dono do repositório) demonstra ao vivo, e os alunos clonam o repositório (público no GitHub como `santo-projeto`) e sobem a API num cluster próprio (kind no WSL ou Killercoda).
+Projeto didático de uma aula das 8h às 12h (quarta, 18/11/2026; o conteúdo é o de uma aula de 90 minutos, com mais tempo de prática) sobre AWS, Terraform e Kubernetes, para alunos iniciantes. O professor (dono do repositório) demonstra ao vivo, e os alunos clonam o repositório (público no GitHub como `santo-projeto`) e sobem a API num cluster próprio (kind no WSL ou Killercoda).
 
 Estado atual: em construção, conforme o plano. Antes de mexer em qualquer coisa, leia:
 - `docs/superpowers/specs/2026-11-16-aula-infra-design.md`: a spec aprovada (o que construir e o que não construir).

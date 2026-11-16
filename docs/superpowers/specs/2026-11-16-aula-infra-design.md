@@ -4,7 +4,7 @@ Data: 2026-11-16 · Repositório: `santo-projeto` (pasta local `santo_projeto`)
 
 ## 1. Intenção
 
-O professor (dono deste repositório) dá esta semana uma aula de 90 minutos para alunos iniciantes em nuvem. Ele mostra um projeto completo, com três pastas, indo do repositório para a internet: o Terraform modular cria a infraestrutura na AWS, a API roda no Kubernetes (EKS) e o front é publicado no S3. Depois os alunos clonam o mesmo repositório e sobem a API num cluster deles.
+O professor (dono deste repositório) dá esta semana uma aula para alunos iniciantes em nuvem. (Atualização de 16/11: a aula vai das 8h às 12h; o conteúdo continua o de 90 minutos, com mais tempo de prática para os alunos e dois intervalos.) Ele mostra um projeto completo, com três pastas, indo do repositório para a internet: o Terraform modular cria a infraestrutura na AWS, a API roda no Kubernetes (EKS) e o front é publicado no S3. Depois os alunos clonam o mesmo repositório e sobem a API num cluster deles.
 
 Já existem dois docs da aula, e este repositório precisa bater com eles:
 

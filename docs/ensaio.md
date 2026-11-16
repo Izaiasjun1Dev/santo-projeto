@@ -82,7 +82,7 @@ Nada mais falhou: `preparar.sh`, `destruir.sh` e `conferir.sh` rodaram sem alter
 Preços on-demand em `us-east-1` (AWS Pricing API, 16/11): EKS US$ 0,10/h por cluster; t3.medium US$ 0,0416/h; NAT Gateway US$ 0,045/h + US$ 0,045/GB; Classic Load Balancer US$ 0,025/h (hora ou fração); IPv4 público US$ 0,005/h por endereço; gp3 US$ 0,08/GB-mês (2 discos de 20 GB). Por hora, com tudo de pé: cerca de **US$ 0,27/h** (EKS 0,10 + nós 0,083 + NAT 0,05 com o IP + LB 0,035 com 2 IPs + discos e chave KMS < 0,01).
 
 - **Este ensaio:** infraestrutura de pé por ~35 min na rodada 1 e ~30 min na rodada 2, LB por ~5 min em cada. Contando hora cheia para EKS, NAT e LB (cobrança por hora ou fração), mais tráfego de NAT (pull de imagens, < 1 GB) e logs do plano de controle: **menos de US$ 1** no total.
-- **Dia da aula (~2 h de pé, LB por ~1 h):** EKS 0,20 + nós 0,17 + NAT 0,10 + LB 0,035 + IPs, discos, NAT por GB e logs ~0,10 = **cerca de US$ 0,60 a US$ 1**. Esquecer tudo ligado por um dia custa ~US$ 6,50.
+- **Dia da aula (08:00–12:00; infraestrutura de pé ~4,5 h, das 7h30 ao fim do destroy; LB por ~2 h):** EKS 0,45 + nós 0,37 + NAT 0,23 + LB 0,07 + IPs, discos, NAT por GB e logs ~0,15 = **cerca de US$ 1,30 a US$ 1,50**. Esquecer tudo ligado por um dia custa ~US$ 6,50.
 
 ## Mudanças para os docs
 
@@ -98,10 +98,12 @@ Preços on-demand em `us-east-1` (AWS Pricing API, 16/11): EKS US$ 0,10/h por cl
 - **Guia › Antes de começar:** depois do `kubectl get nodes`, acrescentar "Se aparecer `NotReady`, espere uns 20 segundos e rode de novo."
 - **Guia › passo 2:** acrescentar "No kind só existe um nó, então a coluna `NODE` é igual para todos os pods." (opcional)
 - **Guia › Desafio, item 4:** com a imagem já no nó o substituto fica `Running` em menos de 1 s; avisar que o tempo é "alguns segundos". (opcional)
+- **Roteiro › Cronograma (mudança de 16/11, não veio do ensaio):** a aula passou a ser das 08:00 às 12:00, com o mesmo conteúdo e mais prática: 08:00 abertura e ambiente (40 min), 08:40 Parte 1 (30), 09:10 "siga a variável" (20), 09:30 intervalo (15), 09:45 Parte 2 na AWS (40), 10:25 intervalo (15), 10:40 alunos nos sete passos no kind (45), 11:25 desafio (20), 11:45 encerramento com destroy ao vivo (15). Rodar o `preparar.sh` às 7h30; custo do dia ~US$ 1,30 a 1,50.
+- **Guia › Desafio:** "em 15 minutos" vira "em 20 minutos".
 
 ## Rodada do professor
 
-Plano B: sua própria rodada gravada, caso a demonstração ao vivo falhe. Ela custa cerca de US$ 0,60 a US$ 1 por 2 h de infraestrutura de pé. Não deixe nada ligado ao terminar.
+Plano B: sua própria rodada gravada, caso a demonstração ao vivo falhe. Ela custa cerca de US$ 0,30 por hora de infraestrutura de pé (uma rodada completa leva ~1 h). Não deixe nada ligado ao terminar.
 
 **Antes de começar**
 
