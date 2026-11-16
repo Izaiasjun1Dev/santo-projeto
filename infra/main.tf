@@ -51,3 +51,13 @@ module "site" {
 
   nome_bucket = "${var.projeto}-front-${data.aws_caller_identity.atual.account_id}"
 }
+
+module "cicd" {
+  source = "./modules/cicd"
+
+  nome                = var.projeto
+  repositorio_github  = var.repositorio_github
+  nome_cluster        = module.eks.nome
+  arn_cluster         = module.eks.arn
+  arn_repositorio_ecr = module.ecr.arns["back"]
+}
