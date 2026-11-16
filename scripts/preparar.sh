@@ -18,7 +18,11 @@ for ferramenta in aws terraform kubectl docker jq node; do
 done
 aws sts get-caller-identity --query Account --output text >/dev/null \
   || { echo "Credenciais AWS inválidas para o perfil $AWS_PROFILE" >&2; exit 1; }
-echo "Ferramentas e credenciais OK."
+docker info >/dev/null 2>&1 \
+  || { echo "Abra o Docker Desktop e rode de novo." >&2; exit 1; }
+grep -q "versao 1" back/app/application/obter_saudacao.py \
+  || { echo "A mensagem não está na versão 1; rode: git checkout back/app/application/obter_saudacao.py" >&2; exit 1; }
+echo "Ferramentas, Docker e credenciais OK."
 
 # 2. Infraestrutura (leva uns 15 minutos por causa do EKS)
 echo "==> 2/6 Terraform init e apply"

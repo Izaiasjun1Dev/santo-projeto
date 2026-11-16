@@ -22,6 +22,10 @@ fi
 
 cd "$(dirname "$0")/.."
 
+# A v1 precisa sair com a mensagem da versão 1
+grep -q "versao 1" back/app/application/obter_saudacao.py \
+  || { echo "A mensagem não está na versão 1; rode: git checkout back/app/application/obter_saudacao.py"; exit 1; }
+
 # Nomes de imagem precisam estar em minúsculas (o usuário do GitHub pode ter maiúsculas)
 DONO=$(echo "$GITHUB_USER" | tr '[:upper:]' '[:lower:]')
 BACK="ghcr.io/$DONO/santo-projeto-back"
