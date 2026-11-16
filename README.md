@@ -1,6 +1,6 @@
 # Santo Projeto
 
-Projeto da aula de infraestrutura: uma API e um site React que você sobe na AWS com Terraform e Kubernetes (EKS).
+Projeto da aula de infraestrutura: uma API e um site React. O professor demonstra na AWS, com Terraform e Kubernetes (EKS); você sobe a API em um cluster Kubernetes local (kind) ou no Killercoda.
 
 ## Estrutura
 

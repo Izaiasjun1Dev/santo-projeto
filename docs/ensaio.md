@@ -11,6 +11,12 @@ Feita em 16/11, perfil `default`, região `us-east-1`.
 
 ## Local
 
+Feito em 16/11 no Mac do professor, com o contêiner do back na porta 8000 e o servidor de desenvolvimento do front na 5173.
+
+- **Back:** a imagem foi construída e `curl -s localhost:8000/api/saudacao` devolve `{"mensagem":"Ola, turma! Esta e a versao 1.","servidor":"<id do contêiner>"}`. Cabeçalho CORS presente: `access-control-allow-origin: *`.
+- **Front:** `npm run lint` sem avisos; o servidor de desenvolvimento na 5173 chama a API da 8000.
+- **Infra (sem custo):** `terraform fmt -recursive -check` sem diferenças e `terraform validate` com `Success! The configuration is valid.`
+
 ## kind
 
 Máquina: Mac ARM do professor fazendo o papel do aluno. kind v0.33.0, Docker 29.9.3. Imagem do nó: `ghcr.io/izaiasjun1dev/kindest-node:v1.37.0` (Kubernetes v1.37.0); imagem da API: `ghcr.io/izaiasjun1dev/santo-projeto-back:v1`/`:v2`. Os dois pulls funcionaram anonimamente (depois de `docker logout ghcr.io`).
@@ -84,6 +90,7 @@ Preços on-demand em `us-east-1` (AWS Pricing API, 16/11): EKS US$ 0,10/h por cl
 - **Roteiro › Código: infra › Módulo rede:** `version = "~> 6.0"` virou `version = "6.7.3"` (o `~> 6.0` do provider aws na raiz continua igual).
 - **Roteiro › Preparação:** o `preparar.sh` levou 15 a 17 min (o EKS sozinho, 11 min); "uns 15 minutos" continua valendo, mas vale dizer "15 a 20 minutos". O `destruir.sh` leva ~13 min.
 - **Roteiro › Parte 2, passo 2:** o endereço respondeu em 85 a 103 s, menos que os "2 a 3 minutos" do texto; manter a orientação de seguir para o passo 3. O load balancer criado é um Classic Load Balancer, sem configuração extra no cluster (o plano B do `port-forward` não foi necessário na AWS).
+- **Roteiro › Parte 2, passo 8:** o comando usava `$REPO`, que não existe no terminal do professor (o `preparar.sh` guarda a URL só no processo dele), e não tinha `--platform`. Trocar por quatro linhas, rodadas na raiz do projeto: `REPO=$(terraform -chdir=infra output -json repositorios | jq -r .back)`, `docker build --platform linux/amd64 -t $REPO:v2 back`, `docker push $REPO:v2` e `kubectl set image deployment/back back=$REPO:v2`. Avisar que o amd64 é obrigatório (Mac ARM, nós x86). No passo 9, lembrar de `git checkout back/app/application/obter_saudacao.py` para voltar à v1. (Já aplicado no Roteiro, rev 47.)
 - **Roteiro › Parte 2, passo 9:** o `kubectl rollout undo` (kubectl 1.36) imprime um aviso sobre `last-applied-configuration` porque o deployment foi criado com `kubectl apply`. É inofensivo; vale avisar para ninguém se assustar no projetor.
 - **Roteiro › Parte 2, passo 6:** a página do front usa o estilo padrão do navegador e fica pequena no projetor; dar zoom no navegador (Cmd +) antes de clicar.
 - **Guia › passo 5:** trocar a frase final por: "O `port-forward` do terminal 3 vai parar de funcionar: o próximo `curl` falha (`Empty reply from server`) e o terminal 3 mostra `error: lost connection to pod`. Aperte Ctrl+C no terminal 3 se ele ainda estiver rodando, rode de novo o passo 3 e veja que agora outro pod responde." O Guia diz "cai junto", mas o processo só sai depois da primeira chamada que falha.
@@ -108,10 +115,12 @@ Plano B: sua própria rodada gravada, caso a demonstração ao vivo falhe. Ela c
 
 **Parte 1: Terraform** (na pasta `infra/`)
 
+- [ ] `cd infra`.
 - [ ] Mostre a árvore e siga `repositorios` de `envs/aula.tfvars` até `modules/ecr`.
 - [ ] `terraform plan -var-file=envs/aula.tfvars` (`No changes.`) e `terraform output`.
 - [ ] Edite o `.tfvars` para `repositorios = ["back", "teste-aluno"]`, rode `plan` (`1 to add`) e `terraform apply -var-file=envs/aula.tfvars` (segundos). Mostre o repositório novo no console do ECR.
 - [ ] Desfaça com `git checkout envs/aula.tfvars` e rode o `apply` de novo (`1 destroyed`).
+- [ ] `cd ..` para voltar à raiz do projeto.
 
 **Parte 2: Kubernetes e front** (na raiz do projeto, `kubectl get pods -w` no outro terminal)
 
