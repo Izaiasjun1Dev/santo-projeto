@@ -25,7 +25,7 @@ aws sts get-caller-identity --query Account --output text >/dev/null \
 docker info >/dev/null 2>&1 \
   || { echo "Abra o Docker Desktop e rode de novo." >&2; exit 1; }
 grep -q "versao 1" back/app/application/obter_saudacao.py \
-  || { echo "A mensagem não está na versão 1; rode: git checkout back/app/application/obter_saudacao.py" >&2; exit 1; }
+  || { echo "A mensagem não está na versão 1; rode git checkout back/app/application/obter_saudacao.py (ou git revert do commit da versão 3)" >&2; exit 1; }
 gh auth status --hostname github.com >/dev/null 2>&1 \
   || { echo "O gh não está logado; rode: gh auth login" >&2; exit 1; }
 echo "Ferramentas, Docker, gh e credenciais OK."

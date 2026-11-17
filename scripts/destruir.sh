@@ -24,9 +24,18 @@ fi
 NOME_CLUSTER=$($TF output -raw nome_cluster 2>/dev/null || true)
 NOME_CLUSTER=${NOME_CLUSTER:-santo-projeto}
 
-# 1. Remove o Service/Deployment antes: o load balancer criado pelo
+# 1. Desliga o CD: apaga o segredo, para o deploy não apontar para um papel que vai sumir
+echo "==> 1/5 Apagando o segredo AWS_PAPEL_CICD do GitHub"
+if command -v gh >/dev/null 2>&1 \
+   && gh secret delete AWS_PAPEL_CICD --repo "$REPO_GITHUB" >/dev/null 2>&1; then
+  echo "Segredo apagado."
+else
+  echo "AVISO: não apaguei o segredo (já não existia, ou o gh não está logado); seguindo." >&2
+fi
+
+# 2. Remove o Service/Deployment antes: o load balancer criado pelo
 #    Kubernetes não é do Terraform e travaria a remoção da VPC.
-echo "==> 1/5 Removendo a aplicação do cluster $NOME_CLUSTER"
+echo "==> 2/5 Removendo a aplicação do cluster $NOME_CLUSTER"
 if aws eks describe-cluster --name "$NOME_CLUSTER" --region us-east-1 >/dev/null 2>&1; then
   if aws eks update-kubeconfig --name "$NOME_CLUSTER" --region us-east-1 >/dev/null 2>&1 \
      && kubectl delete -f back/k8s/ --ignore-not-found --timeout=5m; then
@@ -49,15 +58,6 @@ if aws eks describe-cluster --name "$NOME_CLUSTER" --region us-east-1 >/dev/null
   fi
 else
   echo "AVISO: cluster $NOME_CLUSTER não encontrado ou inacessível; pulando o kubectl." >&2
-fi
-
-# 2. Desliga o CD: apaga o segredo, para o deploy não apontar para um papel que vai sumir
-echo "==> 2/5 Apagando o segredo AWS_PAPEL_CICD do GitHub"
-if command -v gh >/dev/null 2>&1 \
-   && gh secret delete AWS_PAPEL_CICD --repo "$REPO_GITHUB" >/dev/null 2>&1; then
-  echo "Segredo apagado."
-else
-  echo "AVISO: não apaguei o segredo (já não existia, ou o gh não está logado); seguindo." >&2
 fi
 
 # 3. Infraestrutura
