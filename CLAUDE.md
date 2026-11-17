@@ -44,8 +44,8 @@ Também precisam continuar de pé:
 - **`scripts/`** (bash, só macOS):
   - `preparar.sh`: `terraform apply`, push da `back:v1` (amd64) para o ECR, kubeconfig, e troca do placeholder `URL-DO-REPOSITORIO` em `back/k8s/deployment.yaml`, que não deve ser commitada com a URL real.
   - `publicar-imagens.sh`: `v1` e `v2` multi-arquitetura no GHCR e uma cópia de `kindest/node`.
-  - `destruir.sh`: primeiro os recursos k8s (para o load balancer não ficar órfão), depois o `terraform destroy`, e restaura o placeholder.
-  - `preparar.sh` também grava o segredo `AWS_PAPEL_CICD` (gh) e o `destruir.sh` o apaga antes do destroy.
+  - `destruir.sh`: primeiro o segredo do CD, depois os recursos k8s (para o load balancer não ficar órfão), depois o `terraform destroy`, e restaura o placeholder.
+  - `preparar.sh` também grava o segredo `AWS_PAPEL_CICD` (gh) e o `destruir.sh` o apaga como primeiro passo, antes de tudo.
   - `conferir.sh`: só lê; sai com 1 se sobrou recurso do projeto.
 
 ## Imagens
